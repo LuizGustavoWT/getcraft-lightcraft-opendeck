@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>LightCraft Develop Dial</title>
+  <link rel="stylesheet" href="run.css">
+</head>
+<body>
+  <main>
+    <h1>LightCraft Develop Dial</h1>
+    <p class="hint">Use on an encoder with LightCraft running as <code>lightcraft --control 7980</code>. Each turn nudges the selected photo(s), preserving their other edits.</p>
+    <label>LightCraft CLI executable
+      <input id="executable" type="text" placeholder="lightcraft-cli">
+    </label>
+    <label>Live-control address
+      <input id="controlAddress" type="text" placeholder="127.0.0.1:7980">
+    </label>
+    <label>Develop control
+      <select id="control">
+        <option value="light.exposure">Exposure</option>
+        <option value="wb.temp">Temperature</option>
+        <option value="wb.tint">Tint</option>
+        <option value="light.contrast">Contrast</option>
+        <option value="light.highlights">Highlights</option>
+        <option value="light.shadows">Shadows</option>
+        <option value="effects.clarity">Clarity</option>
+        <option value="effects.dehaze">Dehaze</option>
+        <option value="color.vibrance">Vibrance</option>
+        <option value="crop.angle">Straighten angle</option>
+        <option value="custom">Custom control ID</option>
+      </select>
+    </label>
+    <label id="customRow" hidden>Custom develop control ID
+      <input id="customControl" type="text" placeholder="detail.sharpenAmount">
+    </label>
+    <label>Increment per encoder tick
+      <input id="step" type="number" step="any" value="0.1">
+    </label>
+    <label>Encoder press
+      <select id="pressAction">
+        <option value="beforeAfter">Toggle Before / After</option>
+        <option value="masking">Open Masking panel</option>
+        <option value="export">Open Export dialog</option>
+        <option value="undo">Undo last edit</option>
+        <option value="none">Do nothing</option>
+      </select>
+    </label>
+    <label>Working directory <span class="optional">optional</span>
+      <input id="workingDirectory" type="text" placeholder="/home/me/Pictures">
+    </label>
+    <div class="grid">
+      <label>Key title <span class="optional">optional</span>
+        <input id="title" type="text" placeholder="Shows control and delta">
+      </label>
+      <label>Timeout (seconds)
+        <input id="timeoutSeconds" type="number" min="1" max="300" value="15">
+      </label>
+    </div>
+    <p id="status" role="status">Suggested D200X layout: Exposure 0.10, Temperature 100, Contrast 1.</p>
+  </main>
+  <script>
+    let socket, context;
+    const $ = (id) => document.getElementById(id);
+    const fields = ["executable", "controlAddress", "control", "customControl", "step", "pressAction", "workingDirectory", "title", "timeoutSeconds"];
+    function settings() { return {
+      executable: $("executable").value.trim(), controlAddress: $("controlAddress").value.trim(), control: $("control").value,
+      customControl: $("customControl").value.trim(), step: Number($("step").value) || 0.1, pressAction: $("pressAction").value,
+      workingDirectory: $("workingDirectory").value.trim(), title: $("title").value.trim(), timeoutSeconds: Number($("timeoutSeconds").value) || 15,
+    }; }
+    function persist() { if (socket && context) socket.send(JSON.stringify({event:"setSettings", context, payload:settings()})); }
+    function visibility() { $("customRow").hidden = $("control").value !== "custom"; }
+    function connectElgatoStreamDeckSocket(port, propertyInspectorUUID, registerEvent, info, actionInfo) {
+      const action = JSON.parse(actionInfo); context = action.context; const saved = (action.payload && action.payload.settings) || {};
+      $("executable").value = saved.executable || ""; $("controlAddress").value = saved.controlAddress || "127.0.0.1:7980";
+      $("control").value = saved.control || "light.exposure"; $("customControl").value = saved.customControl || "";
+      $("step").value = saved.step || 0.1; $("pressAction").value = saved.pressAction || "beforeAfter";
+      $("workingDirectory").value = saved.workingDirectory || ""; $("title").value = saved.title || ""; $("timeoutSeconds").value = saved.timeoutSeconds || 15;
+      socket = new WebSocket(`ws://localhost:${port}`); socket.onopen = () => socket.send(JSON.stringify({event:registerEvent, uuid:propertyInspectorUUID}));
+      fields.forEach((id) => $(id).addEventListener(id === "control" ? "change" : "input", () => { visibility(); persist(); })); visibility();
+    }
+  </script>
+</body>
+</html>
