@@ -2,13 +2,16 @@
 
 [Português do Brasil](#português-do-brasil) · [Contributing](CONTRIBUTING.md) · [LightCraft](https://github.com/storytold/lightcraft) · [OpenDeck](https://github.com/nekename/OpenDeck)
 
-An independent Linux-only [OpenDeck](https://github.com/nekename/OpenDeck) plugin for running every available [LightCraft CLI](https://github.com/storytold/lightcraft) command from a Stream Deck key. It does not bundle LightCraft: point it at the `lightcraft-cli` installed on your machine.
+An independent Linux-only [OpenDeck](https://github.com/nekename/OpenDeck) plugin that puts practical [LightCraft](https://github.com/storytold/lightcraft) culling and develop controls on a Stream Deck. It does not bundle LightCraft: point it at the `lightcraft-cli` installed on your machine.
 
 Each action stores an executable path and a JSON array of arguments. The plugin launches the executable directly, without `sh -c` or another shell. That makes JSON parameters, spaces in paths, and untrusted filenames safe to pass as arguments.
 
 ## Features
 
-- One configurable **Run LightCraft CLI** action for keypad keys and encoders.
+- **LightCraft Live Control**: pick/reject, rating, color label, next/previous photo, Before/After, crop ratios, auto straighten, presets, masking, and export actions.
+- **LightCraft Develop Dial** for Stream Deck+ and Ulanzi D200X-style encoders: relative exposure, temperature, tint, tone, color, dehaze, clarity and straighten adjustments. Encoder press can toggle Before/After, open Masking/Export, or undo.
+- The live controls act on the selected photo(s) in the running LightCraft application, including a library already locked by that app.
+- One configurable **Run LightCraft CLI** escape hatch for keypad keys and encoders.
 - Supports every LightCraft CLI subcommand, option, and future addition: the action forwards the exact JSON argument array you configure.
 - Loads the installed CLI's command or tool catalog in the Property Inspector and creates an app-specific, editable action template.
 - Configurable executable path, working directory, timeout (1–300 seconds), label, and optional output summary on the key.
@@ -20,14 +23,15 @@ Each action stores an executable path and a JSON array of arguments. The plugin 
 - Linux x86_64
 - OpenDeck with OpenAction-compatible plugin support
 - LightCraft and `lightcraft-cli` installed and available in `PATH`, or its absolute path entered in the Property Inspector
+- For live controls, launch the app with `lightcraft --control 7980` (or set the matching address in each action)
 
 ## Install
 
 1. Download `getcraft-lightcraft-opendeck-linux-x86_64.zip` from the [latest release](../../releases/latest).
 2. In OpenDeck, open **Plugins** → **Install from file** and select the ZIP. Do not extract or rename the `.sdPlugin` directory.
-3. Drag **LightCraft CLI → Run LightCraft CLI** to a key.
-4. Enter the CLI path if `lightcraft-cli` is not in `PATH`, then enter a JSON argument array.
-5. Use **Test command**. A green check means the CLI exited successfully; an alert means that its error summary is available in the Property Inspector and OpenDeck logs.
+3. Start LightCraft with `lightcraft --control 7980`.
+4. Drag **LightCraft Live Control** to culling, crop, masking and export keys. Add **LightCraft Develop Dial** to an encoder for exposure, temperature or contrast.
+5. The generic **Run LightCraft CLI** action remains available for every other CLI command.
 
 ## Configuration and examples
 
@@ -40,6 +44,24 @@ The **Arguments** field must contain a JSON array of strings. It is not a shell 
 Use the exact argument syntax shown by `lightcraft-cli --help` for project, file, export, and live-app control operations. The generic array accepts every documented subcommand and option.
 
 The Property Inspector's **Load command catalog** button asks the installed CLI for the catalog supported by this application. Selecting an ID fills an app-specific, editable argument template; use **Test command** after adding the parameters and options required by your installed CLI version. The generic JSON array remains the canonical path to every CLI capability.
+
+## Suggested D200X / Stream Deck+ layout
+
+| Control | Suggested action |
+| --- | --- |
+| Key 1 / 2 | Pick / Reject |
+| Key 3 | Rating: 5 stars |
+| Key 4 | Color label: Green |
+| Key 5 | Before / After |
+| Key 6 | Crop 16:9 |
+| Key 7 | Auto straighten |
+| Key 8 | Open Masking panel |
+| Key 9 | Open Export dialog |
+| Encoder 1 | Develop Dial: Exposure, step 0.10 |
+| Encoder 2 | Develop Dial: Temperature, step 100 |
+| Encoder 3 | Develop Dial: Contrast, step 1 |
+
+Each dial uses LightCraft's `develop.adjust` command, so it adds a relative delta and keeps all other edits intact. Avoid **Export with previous settings** until a previous export is configured; it deliberately writes files.
 
 ## CI/CD and release
 
@@ -92,13 +114,16 @@ MIT. LightCraft and OpenDeck are independent upstream projects with their own li
 
 # Português do Brasil
 
-Plugin independente, somente para Linux, do [OpenDeck](https://github.com/nekename/OpenDeck) para executar todos os comandos disponíveis da [CLI do LightCraft](https://github.com/storytold/lightcraft) a partir de uma tecla do Stream Deck. O LightCraft não é incluído no plugin: informe o `lightcraft-cli` instalado na sua máquina.
+Plugin independente, somente para Linux, do [OpenDeck](https://github.com/nekename/OpenDeck) que coloca controles práticos de culling e revelação do [LightCraft](https://github.com/storytold/lightcraft) no Stream Deck. O LightCraft não é incluído no plugin: informe o `lightcraft-cli` instalado na sua máquina.
 
 Cada ação guarda o executável e uma lista JSON de argumentos. O plugin chama o executável diretamente, sem `sh -c` nem outro shell. Assim, JSON, caminhos com espaços e nomes de arquivos não confiáveis são passados com segurança.
 
 ## Recursos
 
-- Ação configurável **Run LightCraft CLI** para teclas e encoders.
+- **LightCraft Live Control**: pick/reject, estrelas, etiquetas de cor, navegação, antes/depois, crop, presets, máscaras e exportação.
+- **LightCraft Develop Dial**: ajustes relativos de exposição, temperatura, matiz, tom, cor, dehaze, clarity e endireitamento; pressionar o encoder pode alternar antes/depois, abrir máscara/exportação ou desfazer.
+- As ações ao vivo alteram a foto selecionada dentro do LightCraft aberto, inclusive quando a biblioteca está bloqueada pelo aplicativo.
+- Ação configurável **Run LightCraft CLI** continua disponível para comandos avançados.
 - Todos os subcomandos, opções e futuras adições da CLI: a ação repassa exatamente o vetor JSON configurado.
 - Catálogo dinâmico de comandos ou ferramentas da CLI no Property Inspector, com modelo de ação editável e específico do aplicativo.
 - Caminho do executável, diretório de trabalho, timeout (1–300 s), rótulo e resumo de saída configuráveis.
@@ -107,13 +132,13 @@ Cada ação guarda o executável e uma lista JSON de argumentos. O plugin chama 
 
 ## Requisitos e instalação
 
-Você precisa de Linux x86_64, OpenDeck compatível com OpenAction e LightCraft com `lightcraft-cli` no `PATH` (ou o caminho absoluto no Property Inspector).
+Você precisa de Linux x86_64, OpenDeck compatível com OpenAction e LightCraft com `lightcraft-cli` no `PATH` (ou o caminho absoluto no Property Inspector). Para os controles ao vivo, abra o LightCraft com `lightcraft --control 7980`.
 
 1. Baixe `getcraft-lightcraft-opendeck-linux-x86_64.zip` na [release mais recente](../../releases/latest).
 2. No OpenDeck, abra **Plugins** → **Install from file** e escolha o ZIP. Não extraia nem renomeie a pasta `.sdPlugin`.
-3. Arraste **LightCraft CLI → Run LightCraft CLI** para uma tecla.
-4. Configure o caminho da CLI, se necessário, e o vetor JSON de argumentos.
-5. Use **Test command**. O check verde indica sucesso; o alerta mostra que houve erro, cujo resumo aparece no inspetor e nos logs do OpenDeck.
+3. Inicie o LightCraft com `lightcraft --control 7980`.
+4. Arraste **LightCraft Live Control** para as teclas e **LightCraft Develop Dial** para os encoders.
+5. Use a ação genérica **Run LightCraft CLI** somente para um comando não coberto pelas ações prontas.
 
 ## Configuração
 

@@ -1,4 +1,4 @@
-//! OpenDeck action for the LightCraft command line interface.
+//! OpenDeck actions for the LightCraft command line interface and its live control bridge.
 //!
 //! Arguments are stored as a JSON string array and sent directly to the CLI.
 //! Deliberately never invoking a shell preserves paths, JSON parameters, and user input exactly.
@@ -352,6 +352,415 @@ impl Action for RunLightCraftCli {
     }
 }
 
+/// These controls use `lightcraft-cli run --connect`, so they act on the selected photos and the
+/// UI the photographer is looking at. A CLI action without this bridge would open another library
+/// and be much less useful from a Stream Deck.
+#[derive(Clone, Deserialize, Serialize)]
+#[serde(default, rename_all = "camelCase")]
+struct LightControlSettings {
+    executable: String,
+    control_address: String,
+    working_directory: String,
+    control: String,
+    rating: u8,
+    color_label: String,
+    preset_id: String,
+    title: String,
+    timeout_seconds: u64,
+}
+
+impl Default for LightControlSettings {
+    fn default() -> Self {
+        Self {
+            executable: String::new(),
+            control_address: "127.0.0.1:7980".into(),
+            working_directory: String::new(),
+            control: "pick".into(),
+            rating: 5,
+            color_label: "green".into(),
+            preset_id: String::new(),
+            title: String::new(),
+            timeout_seconds: 15,
+        }
+    }
+}
+
+impl LightControlSettings {
+    fn command_settings(&self) -> CommandSettings {
+        CommandSettings {
+            executable: self.executable.clone(),
+            arguments: DEFAULT_ARGUMENTS.into(),
+            working_directory: self.working_directory.clone(),
+            title: self.title.clone(),
+            show_output: false,
+            timeout_seconds: self.timeout_seconds,
+        }
+    }
+
+    fn address(&self) -> Result<&str, ExecutionError> {
+        let address = self.control_address.trim();
+        if address.is_empty() || !address.contains(':') {
+            return Err(ExecutionError::Configuration(
+                "Control address must be host:port, for example 127.0.0.1:7980.".into(),
+            ));
+        }
+        Ok(address)
+    }
+
+    fn title_or(&self, fallback: &str) -> String {
+        if self.title.trim().is_empty() {
+            fallback.into()
+        } else {
+            self.title.trim().into()
+        }
+    }
+}
+
+fn light_control_command(
+    settings: &LightControlSettings,
+) -> Result<(String, Value, String), ExecutionError> {
+    let label = if settings.color_label.trim().is_empty() {
+        "green"
+    } else {
+        settings.color_label.trim()
+    };
+    let (command, params, title) = match settings.control.as_str() {
+        "rate" => (
+            "photo.rate",
+            json!({"rating": settings.rating.min(5)}),
+            "Rate Photo",
+        ),
+        "label" => ("photo.label", json!({"label": label}), "Color Label"),
+        "pick" => ("photo.pick", json!({}), "Pick"),
+        "reject" => ("photo.reject", json!({}), "Reject"),
+        "next" => ("library.next", json!({}), "Next Photo"),
+        "previous" => ("library.previous", json!({}), "Previous Photo"),
+        "beforeAfter" => (
+            "ui.menu.invoke",
+            json!({"id":"view.beforeAfter"}),
+            "Before / After",
+        ),
+        "beforeAfterSplit" => (
+            "ui.menu.invoke",
+            json!({"id":"view.beforeAfterSplit"}),
+            "Before / After",
+        ),
+        "crop16x9" => ("crop.aspect", json!({"aspect":"16x9"}), "Crop 16:9"),
+        "crop1x1" => ("crop.aspect", json!({"aspect":"1x1"}), "Crop 1:1"),
+        "crop4x5" => ("crop.aspect", json!({"aspect":"4x5"}), "Crop 4:5"),
+        "autoStraighten" => ("crop.autoStraighten", json!({}), "Auto Straighten"),
+        "resetCrop" => ("crop.reset", json!({}), "Reset Crop"),
+        "applyPreset" if !settings.preset_id.trim().is_empty() => (
+            "preset.apply",
+            json!({"id":settings.preset_id.trim()}),
+            "Apply Preset",
+        ),
+        "applyPreset" => {
+            return Err(ExecutionError::Configuration(
+                "Enter a preset ID before using Apply Preset.".into(),
+            ));
+        }
+        "openMasking" => ("ui.menu.invoke", json!({"id":"panel.masking"}), "Masking"),
+        "addSubjectMask" => ("mask.add", json!({"kind":"subject"}), "Subject Mask"),
+        "exportDialog" => ("ui.menu.invoke", json!({"id":"dialog.export"}), "Export"),
+        "exportPrevious" => (
+            "ui.menu.invoke",
+            json!({"id":"app.exportPrevious"}),
+            "Export Previous",
+        ),
+        "undo" => ("edit.undo", json!({}), "Undo"),
+        "redo" => ("edit.redo", json!({}), "Redo"),
+        other => {
+            return Err(ExecutionError::Configuration(format!(
+                "Unknown LightCraft control `{other}`. Choose a control in the Property Inspector."
+            )));
+        }
+    };
+    Ok((command.into(), params, settings.title_or(title)))
+}
+
+fn light_run_arguments(
+    settings: &LightControlSettings,
+    command: &str,
+    params: Value,
+) -> Result<Vec<String>, ExecutionError> {
+    Ok(vec![
+        "run".into(),
+        "--connect".into(),
+        settings.address()?.into(),
+        command.into(),
+        serde_json::to_string(&params)
+            .map_err(|error| ExecutionError::Configuration(error.to_string()))?,
+    ])
+}
+
+async fn report_light_live(
+    instance: &Instance,
+    title: String,
+    result: Result<String, ExecutionError>,
+) {
+    match result {
+        Ok(_) => {
+            let _ = instance.set_title(Some(title), None).await;
+            let _ = instance.show_ok().await;
+        }
+        Err(error) => {
+            log::warn!("LightCraft live control failed: {error}");
+            let _ = instance.set_title(Some("Error"), None).await;
+            let _ = instance.show_alert().await;
+        }
+    }
+}
+
+struct LightCraftControl;
+
+#[async_trait]
+impl Action for LightCraftControl {
+    const UUID: &'static str = "wt.luizgustavo.getcraft.lightcraft.control";
+    type Settings = LightControlSettings;
+
+    async fn key_down(
+        &self,
+        instance: &Instance,
+        settings: &Self::Settings,
+    ) -> OpenActionResult<()> {
+        let result = match light_control_command(settings) {
+            Ok((command, params, title)) => match light_run_arguments(settings, &command, params) {
+                Ok(args) => {
+                    report_light_live(
+                        instance,
+                        title,
+                        execute(&settings.command_settings(), args).await,
+                    )
+                    .await;
+                    return Ok(());
+                }
+                Err(error) => Err(error),
+            },
+            Err(error) => Err(error),
+        };
+        report_light_live(instance, "Error".into(), result).await;
+        Ok(())
+    }
+
+    async fn dial_down(
+        &self,
+        instance: &Instance,
+        settings: &Self::Settings,
+    ) -> OpenActionResult<()> {
+        self.key_down(instance, settings).await
+    }
+
+    async fn will_appear(
+        &self,
+        instance: &Instance,
+        settings: &Self::Settings,
+    ) -> OpenActionResult<()> {
+        if let Ok((_, _, title)) = light_control_command(settings) {
+            let _ = instance.set_title(Some(title), None).await;
+        }
+        Ok(())
+    }
+}
+
+#[derive(Clone, Deserialize, Serialize)]
+#[serde(default, rename_all = "camelCase")]
+struct LightDialSettings {
+    executable: String,
+    control_address: String,
+    working_directory: String,
+    control: String,
+    custom_control: String,
+    step: f64,
+    press_action: String,
+    title: String,
+    timeout_seconds: u64,
+}
+
+impl Default for LightDialSettings {
+    fn default() -> Self {
+        Self {
+            executable: String::new(),
+            control_address: "127.0.0.1:7980".into(),
+            working_directory: String::new(),
+            control: "light.exposure".into(),
+            custom_control: String::new(),
+            step: 0.1,
+            press_action: "beforeAfter".into(),
+            title: String::new(),
+            timeout_seconds: 15,
+        }
+    }
+}
+
+impl LightDialSettings {
+    fn as_control_settings(&self) -> LightControlSettings {
+        LightControlSettings {
+            executable: self.executable.clone(),
+            control_address: self.control_address.clone(),
+            working_directory: self.working_directory.clone(),
+            title: self.title.clone(),
+            timeout_seconds: self.timeout_seconds,
+            ..Default::default()
+        }
+    }
+
+    fn develop_control(&self) -> Result<(&str, &str), ExecutionError> {
+        match self.control.as_str() {
+            "light.exposure" => Ok(("light.exposure", "Exposure")),
+            "wb.temp" => Ok(("wb.temp", "Temperature")),
+            "wb.tint" => Ok(("wb.tint", "Tint")),
+            "light.contrast" => Ok(("light.contrast", "Contrast")),
+            "light.highlights" => Ok(("light.highlights", "Highlights")),
+            "light.shadows" => Ok(("light.shadows", "Shadows")),
+            "effects.clarity" => Ok(("effects.clarity", "Clarity")),
+            "effects.dehaze" => Ok(("effects.dehaze", "Dehaze")),
+            "color.vibrance" => Ok(("color.vibrance", "Vibrance")),
+            "crop.angle" => Ok(("crop.angle", "Straighten")),
+            "custom" if !self.custom_control.trim().is_empty() => {
+                Ok((self.custom_control.trim(), "Develop"))
+            }
+            "custom" => Err(ExecutionError::Configuration(
+                "Enter a develop control ID for a Custom dial.".into(),
+            )),
+            other => Err(ExecutionError::Configuration(format!(
+                "Unknown develop control `{other}`."
+            ))),
+        }
+    }
+
+    fn step(&self) -> Result<f64, ExecutionError> {
+        if !self.step.is_finite() || self.step == 0.0 {
+            return Err(ExecutionError::Configuration(
+                "Dial step must be a non-zero number.".into(),
+            ));
+        }
+        Ok(self.step.clamp(-1_000_000.0, 1_000_000.0))
+    }
+}
+
+fn light_dial_press(
+    settings: &LightDialSettings,
+) -> Result<Option<(String, Value, String)>, ExecutionError> {
+    let control = settings.as_control_settings();
+    let action: (String, Value, String) = match settings.press_action.as_str() {
+        "none" => return Ok(None),
+        "beforeAfter" => (
+            "ui.menu.invoke".into(),
+            json!({"id":"view.beforeAfter"}),
+            "Before / After".into(),
+        ),
+        "masking" => (
+            "ui.menu.invoke".into(),
+            json!({"id":"panel.masking"}),
+            "Masking".into(),
+        ),
+        "export" => (
+            "ui.menu.invoke".into(),
+            json!({"id":"dialog.export"}),
+            "Export".into(),
+        ),
+        "undo" => ("edit.undo".into(), json!({}), "Undo".into()),
+        other => {
+            return Err(ExecutionError::Configuration(format!(
+                "Unknown dial press action `{other}`."
+            )))
+        }
+    };
+    Ok(Some((action.0, action.1, control.title_or(&action.2))))
+}
+
+struct LightCraftDial;
+
+#[async_trait]
+impl Action for LightCraftDial {
+    const UUID: &'static str = "wt.luizgustavo.getcraft.lightcraft.dial";
+    type Settings = LightDialSettings;
+
+    async fn dial_rotate(
+        &self,
+        instance: &Instance,
+        settings: &Self::Settings,
+        ticks: i16,
+        _pressed: bool,
+    ) -> OpenActionResult<()> {
+        if ticks == 0 {
+            return Ok(());
+        }
+        let result = (|| -> Result<(Vec<String>, String), ExecutionError> {
+            let (control, label) = settings.develop_control()?;
+            let delta = settings.step()? * f64::from(ticks);
+            let common = settings.as_control_settings();
+            let args = light_run_arguments(
+                &common,
+                "develop.adjust",
+                json!({"control":control, "delta":delta}),
+            )?;
+            let title: String = if settings.title.trim().is_empty() {
+                format!("{label}\n{delta:+.2}")
+            } else {
+                settings.title.trim().into()
+            };
+            Ok((args, title))
+        })();
+        let common = settings.as_control_settings();
+        match result {
+            Ok((args, title)) => {
+                report_light_live(
+                    instance,
+                    title,
+                    execute(&common.command_settings(), args).await,
+                )
+                .await
+            }
+            Err(error) => report_light_live(instance, "Error".into(), Err(error)).await,
+        }
+        Ok(())
+    }
+
+    async fn dial_down(
+        &self,
+        instance: &Instance,
+        settings: &Self::Settings,
+    ) -> OpenActionResult<()> {
+        let common = settings.as_control_settings();
+        match light_dial_press(settings) {
+            Ok(Some((command, params, title))) => {
+                match light_run_arguments(&common, &command, params) {
+                    Ok(args) => {
+                        report_light_live(
+                            instance,
+                            title,
+                            execute(&common.command_settings(), args).await,
+                        )
+                        .await
+                    }
+                    Err(error) => report_light_live(instance, "Error".into(), Err(error)).await,
+                }
+            }
+            Ok(None) => {}
+            Err(error) => report_light_live(instance, "Error".into(), Err(error)).await,
+        }
+        Ok(())
+    }
+
+    async fn will_appear(
+        &self,
+        instance: &Instance,
+        settings: &Self::Settings,
+    ) -> OpenActionResult<()> {
+        if let Ok((_, label)) = settings.develop_control() {
+            let title: String = if settings.title.trim().is_empty() {
+                label.into()
+            } else {
+                settings.title.trim().into()
+            };
+            let _ = instance.set_title(Some(title), None).await;
+        }
+        Ok(())
+    }
+}
+
 #[tokio::main]
 async fn main() -> OpenActionResult<()> {
     let _ = TermLogger::init(
@@ -361,6 +770,8 @@ async fn main() -> OpenActionResult<()> {
         ColorChoice::Never,
     );
     register_action(RunLightCraftCli).await;
+    register_action(LightCraftControl).await;
+    register_action(LightCraftDial).await;
     run(std::env::args().collect()).await
 }
 
@@ -407,5 +818,35 @@ mod tests {
             .timeout(),
             Duration::from_secs(1)
         );
+    }
+
+    #[test]
+    fn live_control_routes_before_after_to_the_desktop_ui() {
+        let settings = LightControlSettings {
+            control: "beforeAfter".into(),
+            ..Default::default()
+        };
+        let (command, params, _) = light_control_command(&settings).unwrap();
+        assert_eq!(command, "ui.menu.invoke");
+        assert_eq!(params, json!({"id":"view.beforeAfter"}));
+        let arguments = light_run_arguments(&settings, &command, params).unwrap();
+        assert_eq!(arguments[..3], ["run", "--connect", "127.0.0.1:7980"]);
+    }
+
+    #[test]
+    fn develop_dial_keeps_a_relative_adjustment() {
+        let settings = LightDialSettings {
+            control: "light.exposure".into(),
+            step: 0.1,
+            ..Default::default()
+        };
+        assert_eq!(settings.develop_control().unwrap().0, "light.exposure");
+        assert!((settings.step().unwrap() * 3.0 - 0.3).abs() < f64::EPSILON);
+        assert!(LightDialSettings {
+            control: "custom".into(),
+            ..Default::default()
+        }
+        .develop_control()
+        .is_err());
     }
 }

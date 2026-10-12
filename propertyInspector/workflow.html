@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>LightCraft Live Control</title>
+  <link rel="stylesheet" href="run.css">
+</head>
+<body>
+  <main>
+    <h1>LightCraft Live Control</h1>
+    <p class="hint">Acts on the current selection in the open LightCraft app. Start it with <code>lightcraft --control 7980</code>; it does not open a second library.</p>
+    <label>LightCraft CLI executable
+      <input id="executable" type="text" placeholder="lightcraft-cli">
+    </label>
+    <label>Live-control address
+      <input id="controlAddress" type="text" placeholder="127.0.0.1:7980">
+    </label>
+    <label>Action
+      <select id="control">
+        <option value="pick">Flag selected photo(s) as Pick</option>
+        <option value="reject">Flag selected photo(s) as Reject</option>
+        <option value="rate">Set star rating</option>
+        <option value="label">Set colour label</option>
+        <option value="previous">Previous photo</option>
+        <option value="next">Next photo</option>
+        <option value="beforeAfter">Toggle Before / After</option>
+        <option value="beforeAfterSplit">Toggle split Before / After</option>
+        <option value="crop16x9">Crop 16:9</option>
+        <option value="crop1x1">Crop 1:1</option>
+        <option value="crop4x5">Crop 4:5</option>
+        <option value="autoStraighten">Auto straighten</option>
+        <option value="resetCrop">Reset crop</option>
+        <option value="applyPreset">Apply preset ID</option>
+        <option value="openMasking">Open Masking panel</option>
+        <option value="addSubjectMask">Add AI subject mask</option>
+        <option value="exportDialog">Open Export dialog</option>
+        <option value="exportPrevious">Export with previous settings</option>
+        <option value="undo">Undo</option>
+        <option value="redo">Redo</option>
+      </select>
+    </label>
+    <label data-for="rate">Star rating
+      <select id="rating"><option value="1">1 star</option><option value="2">2 stars</option><option value="3">3 stars</option><option value="4">4 stars</option><option value="5">5 stars</option></select>
+    </label>
+    <label data-for="label">Colour label
+      <select id="colorLabel"><option value="red">Red</option><option value="yellow">Yellow</option><option value="green">Green</option><option value="blue">Blue</option><option value="purple">Purple</option><option value="none">Clear label</option></select>
+    </label>
+    <label data-for="applyPreset">Preset ID
+      <input id="presetId" type="text" placeholder="lc.bw-high-contrast">
+    </label>
+    <label>Working directory <span class="optional">optional</span>
+      <input id="workingDirectory" type="text" placeholder="/home/me/Pictures">
+    </label>
+    <div class="grid">
+      <label>Key title <span class="optional">optional</span>
+        <input id="title" type="text" placeholder="Uses the action name">
+      </label>
+      <label>Timeout (seconds)
+        <input id="timeoutSeconds" type="number" min="1" max="300" value="15">
+      </label>
+    </div>
+    <p id="status" role="status">Use one action per Stream Deck key for a fast culling and develop layout.</p>
+  </main>
+  <script>
+    let socket, context;
+    const $ = (id) => document.getElementById(id);
+    const fields = ["executable", "controlAddress", "control", "rating", "colorLabel", "presetId", "workingDirectory", "title", "timeoutSeconds"];
+    function settings() { return {
+      executable: $("executable").value.trim(), controlAddress: $("controlAddress").value.trim(), control: $("control").value,
+      rating: Number($("rating").value) || 5, colorLabel: $("colorLabel").value, presetId: $("presetId").value.trim(),
+      workingDirectory: $("workingDirectory").value.trim(), title: $("title").value.trim(), timeoutSeconds: Number($("timeoutSeconds").value) || 15,
+    }; }
+    function persist() { if (socket && context) socket.send(JSON.stringify({event:"setSettings", context, payload:settings()})); }
+    function visibility() { const action = $("control").value; document.querySelectorAll("[data-for]").forEach((row) => row.hidden = row.dataset.for !== action); }
+    function connectElgatoStreamDeckSocket(port, propertyInspectorUUID, registerEvent, info, actionInfo) {
+      const action = JSON.parse(actionInfo); context = action.context; const saved = (action.payload && action.payload.settings) || {};
+      $("executable").value = saved.executable || ""; $("controlAddress").value = saved.controlAddress || "127.0.0.1:7980";
+      $("control").value = saved.control || "pick"; $("rating").value = saved.rating || 5; $("colorLabel").value = saved.colorLabel || "green";
+      $("presetId").value = saved.presetId || ""; $("workingDirectory").value = saved.workingDirectory || "";
+      $("title").value = saved.title || ""; $("timeoutSeconds").value = saved.timeoutSeconds || 15;
+      socket = new WebSocket(`ws://localhost:${port}`); socket.onopen = () => socket.send(JSON.stringify({event:registerEvent, uuid:propertyInspectorUUID}));
+      fields.forEach((id) => $(id).addEventListener(id === "control" ? "change" : "input", () => { visibility(); persist(); })); visibility();
+    }
+  </script>
+</body>
+</html>

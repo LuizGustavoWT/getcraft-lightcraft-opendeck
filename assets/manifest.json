@@ -1,8 +1,8 @@
 {
   "Name": "LightCraft CLI",
-  "Description": "Run LightCraft CLI and automation commands safely from OpenDeck (Linux).",
+  "Description": "Live photo culling, develop, crop, masking, export and rotary controls for LightCraft on OpenDeck (Linux).",
   "Author": "LuizGustavoWT",
-  "Version": "0.1.0",
+  "Version": "0.2.0",
   "PluginUUID": "wt.luizgustavo.getcraft.lightcraft",
   "CodePaths": {
     "x86_64-unknown-linux-gnu": "x86_64-unknown-linux-gnu/bin/getcraft-lightcraft-opendeck"
@@ -11,19 +11,51 @@
   "Icon": "assets/icon",
   "Category": "GetCraft",
   "OS": [{ "Platform": "linux" }],
-  "Actions": [{
-    "UUID": "wt.luizgustavo.getcraft.lightcraft.run",
-    "Name": "Run LightCraft CLI",
-    "Icon": "assets/action",
-    "States": [{
-      "Image": "assets/action",
-      "TitleAlignment": "bottom",
-      "TitleColor": "#FFFFFF",
-      "FontSize": "12"
-    }],
-    "Controllers": ["Keypad", "Encoder"],
-    "SupportedInMultiActions": true,
-    "Tooltip": "Run any LightCraft CLI command using safe JSON arguments.",
-    "PropertyInspectorPath": "propertyInspector/run.html"
-  }]
+  "Actions": [
+    {
+      "UUID": "wt.luizgustavo.getcraft.lightcraft.run",
+      "Name": "Run LightCraft CLI",
+      "Icon": "assets/action",
+      "States": [{
+        "Image": "assets/action",
+        "TitleAlignment": "bottom",
+        "TitleColor": "#FFFFFF",
+        "FontSize": "12"
+      }],
+      "Controllers": ["Keypad", "Encoder"],
+      "SupportedInMultiActions": true,
+      "Tooltip": "Run any LightCraft CLI command using safe JSON arguments.",
+      "PropertyInspectorPath": "propertyInspector/run.html"
+    },
+    {
+      "UUID": "wt.luizgustavo.getcraft.lightcraft.control",
+      "Name": "LightCraft Live Control",
+      "Icon": "assets/action",
+      "States": [{
+        "Image": "assets/action",
+        "TitleAlignment": "bottom",
+        "TitleColor": "#FFFFFF",
+        "FontSize": "12"
+      }],
+      "Controllers": ["Keypad", "Encoder"],
+      "SupportedInMultiActions": true,
+      "Tooltip": "Control selected photos in the open LightCraft library: cull, crop, mask, compare, preset and export.",
+      "PropertyInspectorPath": "propertyInspector/workflow.html"
+    },
+    {
+      "UUID": "wt.luizgustavo.getcraft.lightcraft.dial",
+      "Name": "LightCraft Develop Dial",
+      "Icon": "assets/action",
+      "States": [{
+        "Image": "assets/action",
+        "TitleAlignment": "bottom",
+        "TitleColor": "#FFFFFF",
+        "FontSize": "12"
+      }],
+      "Controllers": ["Encoder"],
+      "SupportedInMultiActions": true,
+      "Tooltip": "Turn a Stream Deck rotary encoder to nudge exposure, white balance, tone, color or crop straightening on the selected photo.",
+      "PropertyInspectorPath": "propertyInspector/dial.html"
+    }
+  ]
 }
