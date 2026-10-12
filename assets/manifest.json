@@ -2,7 +2,7 @@
   "Name": "LightCraft CLI",
   "Description": "Live photo culling, develop, crop, masking, export and rotary controls for LightCraft on OpenDeck (Linux).",
   "Author": "LuizGustavoWT",
-  "Version": "0.2.0",
+  "Version": "0.2.1",
   "PluginUUID": "wt.luizgustavo.getcraft.lightcraft",
   "CodePaths": {
     "x86_64-unknown-linux-gnu": "x86_64-unknown-linux-gnu/bin/getcraft-lightcraft-opendeck"
