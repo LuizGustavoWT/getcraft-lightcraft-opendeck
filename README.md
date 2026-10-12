@@ -10,6 +10,7 @@ Each action stores an executable path and a JSON array of arguments. The plugin 
 
 ## Features
 
+- **Open LightCraft** starts the desktop app with the selected loopback host and control port, ready for live library and Develop Dial controls.
 - **LightCraft Live Control**: pick/reject, rating, color label, next/previous photo, Before/After, crop ratios, auto straighten, presets, masking, and export actions.
 - **LightCraft Develop Dial** for Stream Deck+ and Ulanzi D200X-style encoders: relative exposure, temperature, tint, tone, color, dehaze, clarity and straighten adjustments. Encoder press can toggle Before/After, open Masking/Export, or undo.
 - The live controls act on the selected photo(s) in the running LightCraft application, including a library already locked by that app.
@@ -37,8 +38,8 @@ Each action stores an executable path and a JSON array of arguments. The plugin 
 
 1. Download `getcraft-lightcraft-opendeck-linux-x86_64.zip` from the [latest release](../../releases/latest).
 2. In OpenDeck, open **Plugins** → **Install from file** and select the ZIP. Do not extract or rename the `.sdPlugin` directory.
-3. Start LightCraft with `lightcraft --control 7980`.
-4. Drag **LightCraft Live Control** to culling, crop, masking and export keys. Add **LightCraft Develop Dial** to an encoder for exposure, temperature or contrast.
+3. Drag **Open LightCraft** to a key, set the desktop executable and control host/port, then press it.
+4. Drag **LightCraft Live Control** to culling, crop, masking and export keys. Add **LightCraft Develop Dial** to an encoder using the same address.
 5. The generic **Run LightCraft CLI** action remains available for every other CLI command.
 
 ## Configuration and examples
@@ -130,6 +131,7 @@ Cada ação guarda o executável e uma lista JSON de argumentos. O plugin chama 
 
 ## Recursos
 
+- **Open LightCraft** abre o aplicativo com o host loopback e a porta de controle para os controles da biblioteca e do Develop Dial.
 - **LightCraft Live Control**: pick/reject, estrelas, etiquetas de cor, navegação, antes/depois, crop, presets, máscaras e exportação.
 - **LightCraft Develop Dial**: ajustes relativos de exposição, temperatura, matiz, tom, cor, dehaze, clarity e endireitamento; pressionar o encoder pode alternar antes/depois, abrir máscara/exportação ou desfazer.
 - As ações ao vivo alteram a foto selecionada dentro do LightCraft aberto, inclusive quando a biblioteca está bloqueada pelo aplicativo.
@@ -152,8 +154,8 @@ Você precisa de Linux x86_64, OpenDeck compatível com OpenAction e LightCraft 
 
 1. Baixe `getcraft-lightcraft-opendeck-linux-x86_64.zip` na [release mais recente](../../releases/latest).
 2. No OpenDeck, abra **Plugins** → **Install from file** e escolha o ZIP. Não extraia nem renomeie a pasta `.sdPlugin`.
-3. Inicie o LightCraft com `lightcraft --control 7980`.
-4. Arraste **LightCraft Live Control** para as teclas e **LightCraft Develop Dial** para os encoders.
+3. Arraste **Open LightCraft** para uma tecla, configure executável, host e porta, depois pressione-a.
+4. Arraste **LightCraft Live Control** para as teclas e **LightCraft Develop Dial** para os encoders usando o mesmo endereço.
 5. Use a ação genérica **Run LightCraft CLI** somente para um comando não coberto pelas ações prontas.
 
 ## Configuração
