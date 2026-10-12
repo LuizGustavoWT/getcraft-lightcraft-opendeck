@@ -1,8 +1,10 @@
-# LightCraft CLI for OpenDeck
+# LightCraft Live Controls for OpenDeck
 
 [Português do Brasil](#português-do-brasil) · [Contributing](CONTRIBUTING.md) · [LightCraft](https://github.com/storytold/lightcraft) · [OpenDeck](https://github.com/nekename/OpenDeck)
 
-An independent Linux-only [OpenDeck](https://github.com/nekename/OpenDeck) plugin that puts practical [LightCraft](https://github.com/storytold/lightcraft) culling and develop controls on a Stream Deck. It does not bundle LightCraft: point it at the `lightcraft-cli` installed on your machine.
+An independent Linux-only [OpenDeck](https://github.com/nekename/OpenDeck) plugin that turns a Stream Deck, Stream Deck+, or D200X-style encoder deck into a practical live control surface for [LightCraft](https://github.com/storytold/lightcraft). Cull with picks, rejects, ratings, and labels; develop with Before/After, crop, masks, presets, export controls, and relative adjustment dials for exposure, temperature, contrast, and more.
+
+The dedicated controls connect to the running LightCraft application, so they operate on the selected photo(s) in the library already on screen—even when that library is open and locked by LightCraft. The configurable `lightcraft-cli` action remains an escape hatch for uncommon commands, rather than the primary deck experience.
 
 Each action stores an executable path and a JSON array of arguments. The plugin launches the executable directly, without `sh -c` or another shell. That makes JSON parameters, spaces in paths, and untrusted filenames safe to pass as arguments.
 
@@ -17,6 +19,12 @@ Each action stores an executable path and a JSON array of arguments. The plugin 
 - Configurable executable path, working directory, timeout (1–300 seconds), label, and optional output summary on the key.
 - Test a configuration in the Property Inspector before assigning it to a key.
 - Linux x86_64 release ZIP created on every CI run; tagged versions are published as GitHub Releases.
+
+## Real photo workflows
+
+- **Cull an event quickly:** keep Pick, Reject, 5 Stars, Green Label, and Next Photo together so selection decisions happen without moving from the keyboard or controller.
+- **Develop without overwriting work:** turn the Exposure, Temperature, or Contrast dial for small relative changes; press the encoder for a Before/After check, then open Masking when local work is needed.
+- **Finish a delivery:** set a crop ratio or auto-straighten, apply a known preset, then open Export from the deck. “Export with previous settings” is deliberately separate because it writes files.
 
 ## Requirements
 
@@ -114,7 +122,9 @@ MIT. LightCraft and OpenDeck are independent upstream projects with their own li
 
 # Português do Brasil
 
-Plugin independente, somente para Linux, do [OpenDeck](https://github.com/nekename/OpenDeck) que coloca controles práticos de culling e revelação do [LightCraft](https://github.com/storytold/lightcraft) no Stream Deck. O LightCraft não é incluído no plugin: informe o `lightcraft-cli` instalado na sua máquina.
+Plugin independente, somente para Linux, do [OpenDeck](https://github.com/nekename/OpenDeck) que transforma Stream Deck, Stream Deck+ ou uma mesa com encoders no estilo D200X em uma superfície de controle ao vivo do [LightCraft](https://github.com/storytold/lightcraft). Faça culling com pick, reject, estrelas e etiquetas; revele com antes/depois, crop, máscaras, presets, exportação e dials de ajustes relativos de exposição, temperatura, contraste e mais.
+
+As ações prontas se conectam ao LightCraft em execução e trabalham sobre as fotos selecionadas na biblioteca que já está aberta — inclusive quando essa biblioteca está bloqueada pelo aplicativo. A ação configurável `lightcraft-cli` continua como saída para comandos pouco comuns, e não como a experiência principal do deck.
 
 Cada ação guarda o executável e uma lista JSON de argumentos. O plugin chama o executável diretamente, sem `sh -c` nem outro shell. Assim, JSON, caminhos com espaços e nomes de arquivos não confiáveis são passados com segurança.
 
@@ -129,6 +139,12 @@ Cada ação guarda o executável e uma lista JSON de argumentos. O plugin chama 
 - Caminho do executável, diretório de trabalho, timeout (1–300 s), rótulo e resumo de saída configuráveis.
 - Botão de teste no Property Inspector antes de associar a ação a uma tecla.
 - ZIP Linux x86_64 gerado em toda execução da CI; tags são publicadas como Releases.
+
+## Fluxos fotográficos reais
+
+- **Fazer culling de um evento:** mantenha Pick, Reject, 5 estrelas, etiqueta verde e Próxima foto juntos para decidir seleções sem sair do teclado ou controlador.
+- **Revelar sem sobrescrever o trabalho:** gire o dial de Exposição, Temperatura ou Contraste para ajustes relativos pequenos; pressione o encoder para conferir Antes/Depois e abra Máscaras quando precisar de edição local.
+- **Finalizar uma entrega:** defina uma proporção de crop ou endireite automaticamente, aplique um preset conhecido e abra Exportar pelo deck. **Exportar com configurações anteriores** fica separado porque grava arquivos.
 
 ## Requisitos e instalação
 
